@@ -1,109 +1,74 @@
-import React, { Component } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-class Chat extends Component {
-    constructor(props) {
-        super(props);
-        this.localVideoRef = React.createRef();
-        this.remoteVideoRef = React.createRef();
-        this.peerConnection = null;
-        this.socket = io('http://localhost:5000');
-        this.state = {
-            roomId: '', 
-        };
+const Chat = () => {
+  const socketRef = useRef();
+  const localVideoRef = useRef();
+  const remoteVideoRef = useRef();
+  const peerRef = useRef();
+  const [roomInfo, setRoomInfo] = useState(null); // State to store room information
+
+  useEffect(() => {
+    socketRef.current = io('http://localhost:5000');
+
+    // Listen for 'roomInfo' event from the server
+    socketRef.current.on('roomInfo', (data) => {
+      setRoomInfo(data); // Update room information in state
+    });
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localVideoRef.current.srcObject = stream;
+
+        // Create a new peer connection
+        peerRef.current = new RTCPeerConnection();
+
+        // Add the local stream to the peer connection
+        stream.getTracks().forEach(track => peerRef.current.addTrack(track, stream));
+
+        // Listen for ICE candidates and send them to the other user
+        peerRef.current.onicecandidate = handleICECandidateEvent;
+
+        // Listen for remote stream and display it in the remote video element
+        peerRef.current.ontrack = handleTrackEvent;
+
+        // Emit signal to server to let others know you're ready for call
+        socketRef.current.emit('join video call');
+      })
+      .catch(error => console.error('Error accessing media devices:', error));
+
+    // Cleanup function
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, []);
+
+  const handleICECandidateEvent = (event) => {
+    if (event.candidate) {
+      socketRef.current.emit('ice-candidate', {
+        candidate: event.candidate,
+      });
     }
+  };
 
-    componentDidMount() {
-        this.setupSocketIO(); 
-        this.setupMediaDevices();
-    }
+  const handleTrackEvent = (event) => {
+    remoteVideoRef.current.srcObject = event.streams[0];
+  };
 
-    setupSocketIO = () => {
-        // Only subscribe to socket events once
-        this.socket.on('iceCandidate', ({ candidate, sender }) => {
-            console.log('Received iceCandidate:', candidate); // Add this console log
-            if (sender !== this.socket.id) {
-                this.peerConnection.addIceCandidate(candidate);
-            }
-        });
-
-        this.socket.on('offer', ({ offer, sender }) => {
-            console.log('Received offer:', offer); // Add this console log
-            if (sender !== this.socket.id) {
-                this.peerConnection.setRemoteDescription(offer);
-                this.createAnswer();
-            }
-        });
-
-        this.socket.on('answer', ({ answer, sender }) => {
-            console.log('Received answer:', answer); // Add this console log
-            if (sender !== this.socket.id) {
-                this.peerConnection.setRemoteDescription(answer);
-            }
-        });
-    };
-
-    setupMediaDevices = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        this.localVideoRef.current.srcObject = stream;
-        this.setState({ roomId: 'myRoom' }); // You can generate room IDs dynamically
-        this.createPeerConnection();
-        this.sendOffer();
-    };
-
-    createPeerConnection = () => {
-        this.peerConnection = new RTCPeerConnection({
-            iceServers: [
-                { urls: 'stun:stun.stunprotocol.org' },
-                { urls: 'stun:stun.l.google.com:19302' },
-            ],
-        });
-
-        this.peerConnection.onicecandidate = this.handleIceCandidate;
-        this.peerConnection.ontrack = this.handleTrack;
-
-        const localStream = this.localVideoRef.current.srcObject;
-        localStream.getTracks().forEach(track => {
-            this.peerConnection.addTrack(track, localStream);
-        });
-    };
-
-    handleIceCandidate = event => {
-        console.log('Local ICE candidate:', event.candidate); // Add this console log
-        if (event.candidate) {
-            this.socket.emit('iceCandidate', { candidate: event.candidate, roomId: this.state.roomId });
-        }
-    };
-    
-
-    handleTrack = event => {
-        console.log('Received remote track:', event); // Add this console log
-        this.remoteVideoRef.current.srcObject = event.streams[0];
-    };
-
-    sendOffer = async () => {
-        const offer = await this.peerConnection.createOffer();
-        await this.peerConnection.setLocalDescription(offer);
-        this.socket.emit('offer', { offer, roomId: this.state.roomId });
-        console.log('Sent offer:', offer); // Add this console log
-    };
-
-    createAnswer = async () => {
-        const answer = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answer);
-        this.socket.emit('answer', { answer, roomId: this.state.roomId });
-        console.log('Sent answer:', answer); // Add this console log
-    };
-
-    render() {
-        return (
-            <div>
-                <h1>Video Chat</h1>
-                <video ref={this.localVideoRef} autoPlay playsInline muted></video>
-                <video ref={this.remoteVideoRef} autoPlay playsInline></video>
-            </div>
-        );
-    }
-}
+  return (
+    <div>
+      <video ref={localVideoRef} autoPlay muted playsInline></video>
+      <video ref={remoteVideoRef} autoPlay playsInline></video>
+      
+      {roomInfo && (
+        <div>
+          <h3>Room Information</h3>
+          <p>Room ID: {roomInfo.roomId}</p>
+          <p>Users: {roomInfo.users.join(', ')}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default Chat;
