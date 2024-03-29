@@ -7,6 +7,7 @@ const Chat = () => {
   const remoteVideoRef = useRef();
   const peerRef = useRef();
   const [roomInfo, setRoomInfo] = useState(null); // State to store room information
+  const [isOfferer, setIsOfferer] = useState(false); // State to determine if the user is the offerer
 
   useEffect(() => {
     socketRef.current = io('http://localhost:5000');
@@ -14,6 +15,8 @@ const Chat = () => {
     // Listen for 'roomInfo' event from the server
     socketRef.current.on('roomInfo', (data) => {
       setRoomInfo(data); // Update room information in state
+      // Determine if this user is the offerer based on the room information
+      setIsOfferer(data.users[0] === socketRef.current.id);
     });
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -32,8 +35,13 @@ const Chat = () => {
         // Listen for remote stream and display it in the remote video element
         peerRef.current.ontrack = handleTrackEvent;
 
-        // Emit signal to server to let others know you're ready for call
-        socketRef.current.emit('join video call');
+        // If this user is the offerer, create and send offer
+        if (isOfferer) {
+          createAndSendOffer();
+        } else {
+          // If this user is not the offerer, listen for offer from the offerer
+          socketRef.current.on('offer', handleOffer);
+        }
       })
       .catch(error => console.error('Error accessing media devices:', error));
 
@@ -41,7 +49,30 @@ const Chat = () => {
     return () => {
       socketRef.current.disconnect();
     };
-  }, []);
+  }, [isOfferer]);
+
+  // Create and send offer
+  const createAndSendOffer = async () => {
+    try {
+      const offer = await peerRef.current.createOffer();
+      await peerRef.current.setLocalDescription(offer);
+      socketRef.current.emit('offer', { sdp: peerRef.current.localDescription });
+    } catch (error) {
+      console.error('Error creating and sending offer:', error);
+    }
+  };
+
+  // Handle offer from the offerer
+  const handleOffer = async (data) => {
+    try {
+      await peerRef.current.setRemoteDescription(data.sdp);
+      const answer = await peerRef.current.createAnswer();
+      await peerRef.current.setLocalDescription(answer);
+      socketRef.current.emit('answer', { sdp: peerRef.current.localDescription });
+    } catch (error) {
+      console.error('Error handling offer:', error);
+    }
+  };
 
   const handleICECandidateEvent = (event) => {
     if (event.candidate) {
