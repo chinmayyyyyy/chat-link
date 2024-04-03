@@ -1,105 +1,200 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import io from "socket.io-client";
 
-const Chat = () => {
-  const socketRef = useRef();
-  const localVideoRef = useRef();
-  const remoteVideoRef = useRef();
-  const peerRef = useRef();
-  const [roomInfo, setRoomInfo] = useState(null); // State to store room information
-  const [isOfferer, setIsOfferer] = useState(false); // State to determine if the user is the offerer
+const URL = "http://localhost:3000";
+
+export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [lobby, setLobby] = useState(true);
+  const [socket, setSocket] = useState(null);
+  const [sendingPc, setSendingPc] = useState(null);
+  const [receivingPc, setReceivingPc] = useState(null);
+  const [remoteVideoTrack, setRemoteVideoTrack] = useState(null);
+  const [remoteAudioTrack, setRemoteAudioTrack] = useState(null);
+  const [remoteMediaStream, setRemoteMediaStream] = useState(null);
+  const remoteVideoRef = useRef(null);
+  const localVideoRef = useRef(null);
 
   useEffect(() => {
-    socketRef.current = io('http://localhost:5000');
+    const socket = io(URL);
+    socket.on("send-offer", async ({ roomId }) => {
+      console.log("sending offer");
+      setLobby(false);
+      const pc = new RTCPeerConnection();
 
-    // Listen for 'roomInfo' event from the server
-    socketRef.current.on('roomInfo', (data) => {
-      setRoomInfo(data); // Update room information in state
-      // Determine if this user is the offerer based on the room information
-      setIsOfferer(data.users[0] === socketRef.current.id);
+      setSendingPc(pc);
+      if (localVideoTrack) {
+        console.error("added tack");
+        console.log(localVideoTrack);
+        pc.addTrack(localVideoTrack);
+      }
+      if (localAudioTrack) {
+        console.error("added tack");
+        console.log(localAudioTrack);
+        pc.addTrack(localAudioTrack);
+      }
+
+      pc.onicecandidate = async (e) => {
+        console.log("receiving ice candidate locally");
+        if (e.candidate) {
+          socket.emit("add-ice-candidate", {
+            candidate: e.candidate,
+            type: "sender",
+            roomId,
+          });
+        }
+      };
+
+      pc.onnegotiationneeded = async () => {
+        console.log("on negotiation neeeded, sending offer");
+        const sdp = await pc.createOffer();
+        pc.setLocalDescription(sdp);
+        socket.emit("offer", {
+          sdp,
+          roomId,
+        });
+      };
     });
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localVideoRef.current.srcObject = stream;
+    socket.on("offer", async ({ roomId, sdp: remoteSdp }) => {
+      console.log("received offer");
+      setLobby(false);
+      const pc = new RTCPeerConnection();
+      pc.setRemoteDescription(remoteSdp);
+      const sdp = await pc.createAnswer();
+      pc.setLocalDescription(sdp);
+      const stream = new MediaStream();
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+      }
 
-        // Create a new peer connection
-        peerRef.current = new RTCPeerConnection();
+      setRemoteMediaStream(stream);
+      // trickle ice
+      setReceivingPc(pc);
+      window.pcr = pc;
+      pc.ontrack = (e) => {
+        alert("ontrack");
+        // console.error("inside ontrack");
+        // const {track, type} = e;
+        // if (type == 'audio') {
+        //     // setRemoteAudioTrack(track);
+        //     // @ts-ignore
+        //     remoteVideoRef.current.srcObject.addTrack(track)
+        // } else {
+        //     // setRemoteVideoTrack(track);
+        //     // @ts-ignore
+        //     remoteVideoRef.current.srcObject.addTrack(track)
+        // }
+        // //@ts-ignore
+        // remoteVideoRef.current.play();
+      };
 
-        // Add the local stream to the peer connection
-        stream.getTracks().forEach(track => peerRef.current.addTrack(track, stream));
-
-        // Listen for ICE candidates and send them to the other user
-        peerRef.current.onicecandidate = handleICECandidateEvent;
-
-        // Listen for remote stream and display it in the remote video element
-        peerRef.current.ontrack = handleTrackEvent;
-
-        // If this user is the offerer, create and send offer
-        if (isOfferer) {
-          createAndSendOffer();
-        } else {
-          // If this user is not the offerer, listen for offer from the offerer
-          socketRef.current.on('offer', handleOffer);
+      pc.onicecandidate = async (e) => {
+        if (!e.candidate) {
+          return;
         }
-      })
-      .catch(error => console.error('Error accessing media devices:', error));
+        console.log("omn ice candidate on receiving seide");
+        if (e.candidate) {
+          socket.emit("add-ice-candidate", {
+            candidate: e.candidate,
+            type: "receiver",
+            roomId,
+          });
+        }
+      };
 
-    // Cleanup function
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, [isOfferer]);
-
-  // Create and send offer
-  const createAndSendOffer = async () => {
-    try {
-      const offer = await peerRef.current.createOffer();
-      await peerRef.current.setLocalDescription(offer);
-      socketRef.current.emit('offer', { sdp: peerRef.current.localDescription });
-    } catch (error) {
-      console.error('Error creating and sending offer:', error);
-    }
-  };
-
-  // Handle offer from the offerer
-  const handleOffer = async (data) => {
-    try {
-      await peerRef.current.setRemoteDescription(data.sdp);
-      const answer = await peerRef.current.createAnswer();
-      await peerRef.current.setLocalDescription(answer);
-      socketRef.current.emit('answer', { sdp: peerRef.current.localDescription });
-    } catch (error) {
-      console.error('Error handling offer:', error);
-    }
-  };
-
-  const handleICECandidateEvent = (event) => {
-    if (event.candidate) {
-      socketRef.current.emit('ice-candidate', {
-        candidate: event.candidate,
+      socket.emit("answer", {
+        roomId,
+        sdp: sdp,
       });
-    }
-  };
+      setTimeout(() => {
+        const track1 = pc.getTransceivers()[0].receiver.track;
+        const track2 = pc.getTransceivers()[1].receiver.track;
+        console.log(track1);
+        if (track1.kind === "video") {
+          setRemoteAudioTrack(track2);
+          setRemoteVideoTrack(track1);
+        } else {
+          setRemoteAudioTrack(track1);
+          setRemoteVideoTrack(track2);
+        }
+        //@ts-ignore
+        remoteVideoRef.current.srcObject.addTrack(track1);
+        //@ts-ignore
+        remoteVideoRef.current.srcObject.addTrack(track2);
+        //@ts-ignore
+        remoteVideoRef.current.play();
+        // if (type == 'audio') {
+        //     // setRemoteAudioTrack(track);
+        //     // @ts-ignore
+        //     remoteVideoRef.current.srcObject.addTrack(track)
+        // } else {
+        //     // setRemoteVideoTrack(track);
+        //     // @ts-ignore
+        //     remoteVideoRef.current.srcObject.addTrack(track)
+        // }
+        // //@ts-ignore
+      }, 5000);
+    });
 
-  const handleTrackEvent = (event) => {
-    remoteVideoRef.current.srcObject = event.streams[0];
-  };
+    socket.on("answer", ({ roomId, sdp: remoteSdp }) => {
+      setLobby(false);
+      setSendingPc((pc) => {
+        pc?.setRemoteDescription(remoteSdp);
+        return pc;
+      });
+      console.log("loop closed");
+    });
+
+    socket.on("lobby", () => {
+      setLobby(true);
+    });
+
+    socket.on("add-ice-candidate", ({ candidate, type }) => {
+      console.log("add ice candidate from remote");
+      console.log({ candidate, type });
+      if (type == "sender") {
+        setReceivingPc((pc) => {
+          if (!pc) {
+            console.error("receicng pc nout found");
+          } else {
+            console.error(pc.ontrack);
+          }
+          pc?.addIceCandidate(candidate);
+          return pc;
+        });
+      } else {
+        setSendingPc((pc) => {
+          if (!pc) {
+            console.error("sending pc nout found");
+          } else {
+            // console.error(pc.ontrack)
+          }
+          pc?.addIceCandidate(candidate);
+          return pc;
+        });
+      }
+    });
+
+    setSocket(socket);
+  }, [name]);
+
+  useEffect(() => {
+    if (localVideoRef.current) {
+      if (localVideoTrack) {
+        localVideoRef.current.srcObject = new MediaStream([localVideoTrack]);
+        localVideoRef.current.play();
+      }
+    }
+  }, [localVideoRef]);
 
   return (
     <div>
-      <video ref={localVideoRef} autoPlay muted playsInline></video>
-      <video ref={remoteVideoRef} autoPlay playsInline></video>
-      
-      {roomInfo && (
-        <div>
-          <h3>Room Information</h3>
-          <p>Room ID: {roomInfo.roomId}</p>
-          <p>Users: {roomInfo.users.join(', ')}</p>
-        </div>
-      )}
+      Hi {name}
+      <video autoPlay width={400} height={400} ref={localVideoRef} />
+      {lobby ? "Waiting to connect you to someone" : null}
+      <video autoPlay width={400} height={400} ref={remoteVideoRef} />
     </div>
   );
 };
-
-export default Chat;

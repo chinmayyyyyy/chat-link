@@ -9,10 +9,10 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route
+          {/* <Route
             path="/chat"
             element={<Chat />}
-          />
+          /> */}
         </Routes>
       </Router>
     </div>
