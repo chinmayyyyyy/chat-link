@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import io from "socket.io-client";
 
-const URL = "http://localhost:3000";
+const URL = "http://localhost:5000";
 
 export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
   const [searchParams, setSearchParams] = useSearchParams();
