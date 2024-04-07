@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import io from "socket.io-client";
+import NextButton from "./NextButton";
 
 const URL = "http://localhost:5000";
 
@@ -195,6 +196,8 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
       <video autoPlay width={400} height={400} ref={localVideoRef} />
       {lobby ? "Waiting to connect you to someone" : null}
       <video autoPlay width={400} height={400} ref={remoteVideoRef} />
+      <NextButton  socket={socket}/>
+    
     </div>
   );
 };
