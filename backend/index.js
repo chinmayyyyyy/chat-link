@@ -143,18 +143,20 @@ class UserManager {
             this.roomManager.removeUserFromRoom(user);
     
             // Get the roomId for the user from the RoomManager
+            console.log(socketId);
             const roomId = this.roomManager.getRoomIdByUserId(socketId);
-            console.log(roomId);
+           console.log(roomId);
             if (roomId) {
                 const room = this.roomManager.rooms.get(roomId);
                 if (room) {
                     const otherUser = room.user1.socket.id === socketId ? room.user2 : room.user1;
                     this.queue.push(otherUser.socket.id);
-                    console.log("user pushed back in the queue");
+                    console.log("User added back to the queue.");
                 }
             }
         }
     }
+    
     clearQueue() {
         console.log("inside clear queues")
         console.log(this.queue.length);

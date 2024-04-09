@@ -104,7 +104,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
           });
         }
       };
-
+      
       socket.emit("answer", {
         roomId,
         sdp: sdp,
