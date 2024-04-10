@@ -114,10 +114,12 @@ class UserManager {
             
             // Pair them up using Room Manager
             this.roomManager.createRoom(user1, user2);
+            console.log("created room with next user");
         } else {
             console.log("Not enough users in the queue to pair up.");
         }
     }
+    
     
     addUser(name, socket) {
         this.users.push({
@@ -139,23 +141,30 @@ class UserManager {
             // Remove the user from the queue if they're in it
             this.queue = this.queue.filter(id => id !== socketId);
     
-            // Remove the user from any room they're in
-            this.roomManager.removeUserFromRoom(user);
-    
             // Get the roomId for the user from the RoomManager
-            console.log(socketId);
             const roomId = this.roomManager.getRoomIdByUserId(socketId);
-           console.log(roomId);
             if (roomId) {
                 const room = this.roomManager.rooms.get(roomId);
                 if (room) {
+                    // Remove the user from the room
+                    this.roomManager.removeUserFromRoom(user);
+                    // Add the other user back to the queue
                     const otherUser = room.user1.socket.id === socketId ? room.user2 : room.user1;
                     this.queue.push(otherUser.socket.id);
+                    otherUser.socket.emit("lobby");
+
                     console.log("User added back to the queue.");
                 }
             }
+    
+            // Emit the lobby event to the reconnected user
+            const reconnectedUser = this.users.find(u => u.socket.id === socketId);
+            if (reconnectedUser) {
+                reconnectedUser.socket.emit("lobby");
+            }
         }
     }
+    
     
     clearQueue() {
         console.log("inside clear queues")
@@ -204,14 +213,22 @@ io.on('connection', (socket) => {
   socket.on("disconnect", () => {
     console.log("user disconnected");
     userManager.removeUser(socket.id);
+    userManager.next();
   })
 
   socket.on("next", () => {
     console.log("User requested to move to the next chat partner.");
-    userManager.roomManager.removeUserFromRoom(socket);
-    userManager.queue.push(socket.id);
-    userManager.next(); // Pair the user with the next available user
+    const user = userManager.users.find(u => u.socket.id === socket.id);
+    if (user) {
+        userManager.roomManager.removeUserFromRoom(user);
+        userManager.queue.push(socket.id);
+        userManager.next(); // Pair the user with the next available user
+    } else {
+        console.log("User not found.");
+    }
 });
+
+
 });
 
 server.listen(5000, () => {

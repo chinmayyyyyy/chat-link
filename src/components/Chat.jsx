@@ -194,9 +194,8 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
     <div>
       Hi {name}
       <video autoPlay width={400} height={400} ref={localVideoRef} />
-      {lobby ? "Waiting to connect you to someone" : null}
-      <video autoPlay width={400} height={400} ref={remoteVideoRef} />
-      <NextButton  socket={socket}/>
+      {lobby ? "Waiting to connect you to someone" :   <video autoPlay width={400} height={400} ref={remoteVideoRef} />}
+      {!lobby ?<NextButton  socket={socket}/> : null}
     
     </div>
   );
