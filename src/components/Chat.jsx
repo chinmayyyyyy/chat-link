@@ -180,6 +180,10 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
 
     setSocket(socket);
   }, [name]);
+  
+  const handleNextButtonClick = () => {
+    setLobby(true); // Update lobby state to true
+};
 
   useEffect(() => {
     if (localVideoRef.current) {
@@ -195,7 +199,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
       Hi {name}
       <video autoPlay width={400} height={400} ref={localVideoRef} />
       {lobby ? "Waiting to connect you to someone" :   <video autoPlay width={400} height={400} ref={remoteVideoRef} />}
-      {!lobby ?<NextButton  socket={socket}/> : null}
+      {!lobby ?<NextButton  socket={socket} onNextClick={handleNextButtonClick}/> : null}
     
     </div>
   );
