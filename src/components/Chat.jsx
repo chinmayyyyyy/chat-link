@@ -14,6 +14,10 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
   const [remoteVideoTrack, setRemoteVideoTrack] = useState(null);
   const [remoteAudioTrack, setRemoteAudioTrack] = useState(null);
   const [remoteMediaStream, setRemoteMediaStream] = useState(null);
+  const [message, setMessage] = useState(""); // Initialize with an empty string
+  const [messages, setMessages] = useState([]); // Initialize with an empty array
+  const [currentRoomId, setCurrentRoomId] = useState(null);
+
   const remoteVideoRef = useRef(null);
   const localVideoRef = useRef(null);
 
@@ -21,6 +25,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
     const socket = io(URL);
     socket.on("send-offer", async ({ roomId }) => {
       console.log("sending offer");
+      setCurrentRoomId(roomId);
       setLobby(false);
       const pc = new RTCPeerConnection();
 
@@ -60,6 +65,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
 
     socket.on("offer", async ({ roomId, sdp: remoteSdp }) => {
       console.log("received offer");
+      setCurrentRoomId(roomId);
       setLobby(false);
       const pc = new RTCPeerConnection();
       pc.setRemoteDescription(remoteSdp);
@@ -140,6 +146,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
     });
 
     socket.on("answer", ({ roomId, sdp: remoteSdp }) => {
+      setCurrentRoomId(roomId);
       setLobby(false);
       setSendingPc((pc) => {
         pc?.setRemoteDescription(remoteSdp);
@@ -150,6 +157,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
 
     socket.on("lobby", () => {
       setLobby(true);
+      setCurrentRoomId(null);
     });
 
     socket.on("add-ice-candidate", ({ candidate, type }) => {
@@ -194,13 +202,68 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
     }
   }, [localVideoRef]);
 
-  return (
-    <div>
-      Hi {name}
-      <video autoPlay width={400} height={400} ref={localVideoRef} />
-      {lobby ? "Waiting to connect you to someone" :   <video autoPlay width={400} height={400} ref={remoteVideoRef} />}
-      {!lobby ?<NextButton  socket={socket} onNextClick={handleNextButtonClick}/> : null}
+// For messaging purpose 
+
+const sendMessage = () => {
+  if (message.trim() !== "") {
+    socket.emit("send-message", { roomId: currentRoomId, message });
+    setMessage(""); // Clear the input field after sending the message
+  }
+};
+
+
+useEffect(() => {
+  if (socket) {
+    socket.on("chat-message", ({ sender, content }) => {
+      setMessages((prevMessages) => [...prevMessages, { sender, content }]);
+    });
+  }
+
+  return () => {
+    if (socket) {
+      socket.off("chat-message");
+    }
+  };
+}, [socket]);
+
+
+return (
+  <div>
+    Hi {name}
+    <video autoPlay width={400} height={400} ref={localVideoRef} />
+    {lobby ? (
+      "Waiting to connect you to someone"
+    ) : (
+      <video autoPlay width={400} height={400} ref={remoteVideoRef} />
+    )}
     
-    </div>
-  );
+    {!lobby && (
+      <NextButton
+        socket={socket}
+        onNextClick={() => {
+          setLobby(true); // Update lobby state to true
+        }}
+      />
+    )}
+    {!lobby && (
+      <div>
+        <div>
+          {messages.map((msg, index) => (
+            <div key={index}>
+              <strong>{msg.sender}: </strong>
+              <span>{msg.content}</span>
+            </div>
+          ))}
+        </div>
+        <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type your message..."
+        />
+        <button onClick={sendMessage}>Send</button>
+      </div>
+    )}
+  </div>
+);
 };

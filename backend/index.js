@@ -153,9 +153,6 @@ class UserManager {
 
                 // Notify the other user about the disconnection
                 otherUser.socket.emit("lobby");
-
-                
-
             }
         }
     }
@@ -258,6 +255,19 @@ io.on('connection', (socket) => {
     userManager.next();
   })
 
+
+  socket.on('join-room', (roomId) => {
+    socket.join(roomId);
+    console.log(`User joined room ${roomId}`);
+  });
+
+  // Handle sending messages
+  socket.on('send-message', ({ roomId, message }) => {
+    // Broadcast the message to all participants in the room
+    io.to(roomId).emit('chat-message', { sender: socket.id, content: message });
+  });
+
+  
   socket.on("next", () => {
     console.log("User requested to move to the next chat partner.");
 
