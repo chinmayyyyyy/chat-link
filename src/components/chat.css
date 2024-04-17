@@ -1,0 +1,97 @@
+body {
+    background-color: #99e9f2;
+    overflow-y: hidden;
+}
+
+.container {
+    background-color: white;
+    padding: 20px;
+    margin: 40px;
+    height: 540px;
+    border-radius: 20px;
+    display: flex; /* Use flexbox */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    position: relative; /* Positioning for child elements */
+}
+.usersVid{
+    position: relative;
+    right: 200px;
+    height: 555px;
+    max-width: 2800px;
+    border-radius: 30px;
+}
+.selfVid {
+    position: absolute;
+    right: 20px;
+    bottom: 80px;
+    border-radius: 50px;
+    height: 300px;
+    width: 300px;
+}
+
+.conectText{
+    color: #e90c59;
+    font-family: 'Roboto', sans-serif;
+}
+
+
+
+/* CSS */
+.button-55 {
+  align-self: center;
+  background-color: #99e9f2;
+  background-image: none;
+  background-position: 0 90%;
+  background-repeat: repeat no-repeat;
+  background-size: 4px 3px;
+  border-radius: 15px 225px 255px 15px 15px 255px 225px 15px;
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: rgba(0, 0, 0, .2) 15px 28px 25px -18px;
+  box-sizing: border-box;
+  color: #e90c59;
+  cursor: pointer;
+  display: inline-block;
+  font-family: Neucha, sans-serif;
+  font-size: 1rem;
+  line-height: 23px;
+  outline: none;
+  padding: .75rem;
+  text-decoration: none;
+  transition: all 235ms ease-in-out;
+  border-bottom-left-radius: 15px 255px;
+  border-bottom-right-radius: 225px 15px;
+  border-top-left-radius: 255px 15px;
+  border-top-right-radius: 15px 225px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  position: absolute;
+  right: 30px;
+  bottom: 40px;
+  
+}
+
+.button-55:hover {
+  box-shadow: rgba(0, 0, 0, .3) 2px 8px 8px -5px;
+  transform: translate3d(0, 2px, 0);
+}
+
+.button-55:focus {
+  box-shadow: rgba(0, 0, 0, .3) 2px 8px 4px -6px;
+}
+
+
+@media (max-width: 768px) {
+    .container {
+        margin: 25px; /* Adjust margin for smaller screens */
+    }
+
+    .selfVid {
+        position: absolute;
+        right: -24px;
+        bottom: 10px;
+        height: 150px; /* Adjust video height for smaller screens */
+    }
+}

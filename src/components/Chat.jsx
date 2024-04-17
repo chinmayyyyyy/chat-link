@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import io from "socket.io-client";
 import NextButton from "./NextButton";
-
+import './chat.css' ;
+import LoadingCube from "./LoadingCube";
 const URL = "http://localhost:5000";
 
 export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
@@ -32,12 +33,12 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
       setSendingPc(pc);
       if (localVideoTrack) {
         console.error("added tack");
-        console.log(localVideoTrack);
+        // console.log(localVideoTrack);
         pc.addTrack(localVideoTrack);
       }
       if (localAudioTrack) {
         console.error("added tack");
-        console.log(localAudioTrack);
+        // console.log(localAudioTrack);
         pc.addTrack(localAudioTrack);
       }
 
@@ -82,19 +83,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
       window.pcr = pc;
       pc.ontrack = (e) => {
         alert("ontrack");
-        // console.error("inside ontrack");
-        // const {track, type} = e;
-        // if (type == 'audio') {
-        //     // setRemoteAudioTrack(track);
-        //     // @ts-ignore
-        //     remoteVideoRef.current.srcObject.addTrack(track)
-        // } else {
-        //     // setRemoteVideoTrack(track);
-        //     // @ts-ignore
-        //     remoteVideoRef.current.srcObject.addTrack(track)
-        // }
-        // //@ts-ignore
-        // remoteVideoRef.current.play();
+     
       };
 
       pc.onicecandidate = async (e) => {
@@ -118,7 +107,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
       setTimeout(() => {
         const track1 = pc.getTransceivers()[0].receiver.track;
         const track2 = pc.getTransceivers()[1].receiver.track;
-        console.log(track1);
+        // console.log(track1);
         if (track1.kind === "video") {
           setRemoteAudioTrack(track2);
           setRemoteVideoTrack(track1);
@@ -126,22 +115,9 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
           setRemoteAudioTrack(track1);
           setRemoteVideoTrack(track2);
         }
-        //@ts-ignore
         remoteVideoRef.current.srcObject.addTrack(track1);
-        //@ts-ignore
         remoteVideoRef.current.srcObject.addTrack(track2);
-        //@ts-ignore
-        remoteVideoRef.current.play();
-        // if (type == 'audio') {
-        //     // setRemoteAudioTrack(track);
-        //     // @ts-ignore
-        //     remoteVideoRef.current.srcObject.addTrack(track)
-        // } else {
-        //     // setRemoteVideoTrack(track);
-        //     // @ts-ignore
-        //     remoteVideoRef.current.srcObject.addTrack(track)
-        // }
-        // //@ts-ignore
+     
       }, 5000);
     });
 
@@ -162,7 +138,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
 
     socket.on("add-ice-candidate", ({ candidate, type }) => {
       console.log("add ice candidate from remote");
-      console.log({ candidate, type });
+      // console.log({ candidate, type });
       if (type == "sender") {
         setReceivingPc((pc) => {
           if (!pc) {
@@ -202,40 +178,18 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
     }
   }, [localVideoRef]);
 
-// For messaging purpose 
-
-const sendMessage = () => {
-  if (message.trim() !== "") {
-    socket.emit("send-message", { roomId: currentRoomId, message });
-    setMessage(""); // Clear the input field after sending the message
-  }
-};
-
-
-useEffect(() => {
-  if (socket) {
-    socket.on("chat-message", ({ sender, content }) => {
-      setMessages((prevMessages) => [...prevMessages, { sender, content }]);
-    });
-  }
-
-  return () => {
-    if (socket) {
-      socket.off("chat-message");
-    }
-  };
-}, [socket]);
-
-
 return (
-  <div>
-    Hi {name}
-    <video autoPlay width={400} height={400} ref={localVideoRef} />
+  <div  className="container">
     {lobby ? (
-      "Waiting to connect you to someone"
+      <div>
+      <h2 className="conectText">Connecting you with someone...</h2>
+      <LoadingCube className="animation"/>
+      </div>
     ) : (
-      <video autoPlay width={400} height={400} ref={remoteVideoRef} />
+      <video className= "usersVid" autoPlay  ref={remoteVideoRef} />
     )}
+    <video className="selfVid" autoPlay width={400} height={400} ref={localVideoRef} />
+
     
     {!lobby && (
       <NextButton
@@ -244,25 +198,6 @@ return (
           setLobby(true); // Update lobby state to true
         }}
       />
-    )}
-    {!lobby && (
-      <div>
-        <div>
-          {messages.map((msg, index) => (
-            <div key={index}>
-              <strong>{msg.sender}: </strong>
-              <span>{msg.content}</span>
-            </div>
-          ))}
-        </div>
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type your message..."
-        />
-        <button onClick={sendMessage}>Send</button>
-      </div>
     )}
   </div>
 );

@@ -261,12 +261,6 @@ io.on('connection', (socket) => {
     console.log(`User joined room ${roomId}`);
   });
 
-  // Handle sending messages
-  socket.on('send-message', ({ roomId, message }) => {
-    // Broadcast the message to all participants in the room
-    io.to(roomId).emit('chat-message', { sender: socket.id, content: message });
-  });
-
   
   socket.on("next", () => {
     console.log("User requested to move to the next chat partner.");
