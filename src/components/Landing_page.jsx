@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Chat } from "./Chat";
+import NavBar from "./NavBar";
+import './landingPage.css'
+
 
 export const LandingPage = () => {
     const [name, setName] = useState("");
@@ -33,9 +36,16 @@ export const LandingPage = () => {
 
     if (!joined) {
         return (
-            <div>
-                <video autoPlay ref={videoRef}></video>
-                <input type="text" onChange={(e) => {
+            <div className ="landingContainer">
+            <NavBar/>
+                <h2 className= "heroText">An Anti-Naked one to one comunication platform</h2>
+
+
+
+
+
+                <video autoPlay height={200} ref={videoRef}></video>
+                <input type="text" onChange={(e) => {               
                     setName(e.target.value);
                 }} />
                 <button onClick={() => {
