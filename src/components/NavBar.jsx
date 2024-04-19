@@ -7,12 +7,12 @@ export default class NavBar extends Component {
         <div className="navbar-logo">
           {/* Insert your logo image or text here */}
           <img src="logo.png" alt="Logo" />
-          <span>Product Name</span>
+          <span>ChatLink</span>
         </div>
         <ul className="navbar-nav">
-          <li className="nav-item">Nav Item 1</li>
-          <li className="nav-item">Nav Item 2</li>
-          <li className="nav-item">Nav Item 3</li>
+          <li className="nav-item">Home</li>
+          <li className="nav-item">Chat</li>
+          <li className="nav-item">About us</li>
         </ul>
       </nav>
     );

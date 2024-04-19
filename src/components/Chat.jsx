@@ -6,7 +6,7 @@ import './chat.css' ;
 import LoadingCube from "./LoadingCube";
 const URL = "http://localhost:5000";
 
-export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
+export const Chat = ({  localAudioTrack, localVideoTrack }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [lobby, setLobby] = useState(true);
   const [socket, setSocket] = useState(null);
@@ -163,7 +163,7 @@ export const Chat = ({ name, localAudioTrack, localVideoTrack }) => {
     });
 
     setSocket(socket);
-  }, [name]);
+  }, );
   
   const handleNextButtonClick = () => {
     setLobby(true); // Update lobby state to true
