@@ -4,7 +4,7 @@ import io from "socket.io-client";
 import NextButton from "./NextButton";
 import './chat.css' ;
 import LoadingCube from "./LoadingCube";
-const URL = "http://localhost:5000";
+const URL = "http://https://chat-link-buge.onrender.com";
 
 export const Chat = ({  localAudioTrack, localVideoTrack }) => {
   const [searchParams, setSearchParams] = useSearchParams();
