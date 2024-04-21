@@ -1,16 +1,26 @@
 // socket.js
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:5000');
+const URL = "https://chat-link-buge.onrender.com";
+let socket;
 
-// Event listener for connection
-socket.on('connect', () => {
-  console.log('Connected to server:', socket.id);
-});
+// Function to create or get the existing socket instance
+const getSocket = () => {
+  if (!socket) {
+    socket = io(URL);
 
-// Event listener for disconnection
-socket.on('disconnect', () => {
-  console.log('Disconnected from server');
-});
+    // Event listener for connection
+    socket.on('connect', () => {
+      console.log('Connected to server:', socket.id);
+    });
 
-export default socket;
+    // Event listener for disconnection
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+  }
+  
+  return socket;
+};
+
+export default getSocket();
