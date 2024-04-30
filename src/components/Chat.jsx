@@ -163,7 +163,7 @@ export const Chat = ({  localAudioTrack, localVideoTrack }) => {
     });
 
     setSocket(socket);
-  }, );
+  },[]);
   
   const handleNextButtonClick = () => {
     setLobby(true); // Update lobby state to true
